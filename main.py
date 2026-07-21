@@ -4,7 +4,9 @@ import requests
 import urllib.parse
 import telebot
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from g4f.client import Client
 
+# Render o'chmasligi uchun dummy server
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -21,6 +23,9 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 # BOT_TOKEN O'RNIGA BOTFATHER BERGAN TOKENNI QO'YING:
 BOT_TOKEN = "8989021358:AAF2uXLXO9F37hoNw6Eok4nH8jMj1vgPWjc"
 bot = telebot.TeleBot(BOT_TOKEN)
+
+# G4F AI Klientini ishga tushirish
+ai_client = Client()
 
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
@@ -64,32 +69,30 @@ def generate_image(message):
     except Exception:
         bot.edit_message_text("❌ Rasm yaratishda vaqt tugadi yoki xatolik bo'ldi. Qayta urinib ko'ring.", chat_id=message.chat.id, message_id=status_msg.message_id)
 
-# 2. AI CHAT BO'LIMI (YANGILANDI VA MUKAMMAL qilindi)
+# 2. AI CHAT BO'LIMI (GPT-4o orqali barqaror va o'zbekcha)
 @bot.message_handler(func=lambda message: True)
 def ai_chat(message):
     user_text = message.text.strip()
     bot.send_chat_action(message.chat.id, 'typing')
 
     try:
-        # AIni doimo O'zbek tilida va ChatGPT modelida javob berishga majburlash:
-        url = "https://text.pollinations.ai/openai"
-        payload = {
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant. Always respond in Uzbek language accurately and clearly."},
+        response = ai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Siz foydali va aqlli sun'iy intellektsiz. Har doim o'zbek tilida aniq, tushunarli va chiroyli javob bering."},
                 {"role": "user", "content": user_text}
-            ],
-            "model": "openai"
-        }
-        
-        response = requests.post(url, json=payload, timeout=30)
+            ]
+        )
 
-        if response.status_code == 200 and response.text.strip():
-            bot.reply_to(message, response.text)
+        reply_text = response.choices[0].message.content
+
+        if reply_text:
+            bot.reply_to(message, reply_text)
         else:
-            bot.reply_to(message, "😔 Kechirasiz, tarmoqda xatolik bo'ldi. Birozdan so'ng qayta urinib ko'ring.")
+            bot.reply_to(message, "😔 Kechirasiz, javob tayyorlashda xatolik bo'ldi.")
 
-    except Exception:
-        bot.reply_to(message, "⚠️ Server bilan bog'lanishda xatolik bo'ldi. Qaytadan urinib ko'ring.")
+    except Exception as e:
+        bot.reply_to(message, "⚠️ Hozirda AI serverida yuklama yuqori. Birozdan so meymon qayta urinib ko'ring.")
 
 if __name__ == "__main__":
     bot.infinity_polling(skip_pending=True)
