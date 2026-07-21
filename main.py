@@ -5,7 +5,6 @@ import urllib.parse
 import telebot
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# Render'ning sleep rejimiga o'tib qolmasligi uchun Flask/HTTP dummy server
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -48,7 +47,6 @@ def generate_image(message):
         encoded_prompt = urllib.parse.quote(prompt)
         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
 
-        # Rasmni yuklab olish uchun timeout 60 soniya qilindi
         response = requests.get(image_url, timeout=60)
 
         if response.status_code == 200:
@@ -63,25 +61,32 @@ def generate_image(message):
         else:
             bot.edit_message_text("❌ Rasmni chizishda xatolik yuz berdi. Qaytadan urinib ko'ring.", chat_id=message.chat.id, message_id=status_msg.message_id)
 
-    except Exception as e:
+    except Exception:
         bot.edit_message_text("❌ Rasm yaratishda vaqt tugadi yoki xatolik bo'ldi. Qayta urinib ko'ring.", chat_id=message.chat.id, message_id=status_msg.message_id)
 
-# 2. AI CHAT BO'LIMI (Oddiy matnlar uchun)
+# 2. AI CHAT BO'LIMI (YANGILANDI VA MUKAMMAL qilindi)
 @bot.message_handler(func=lambda message: True)
 def ai_chat(message):
     user_text = message.text.strip()
     bot.send_chat_action(message.chat.id, 'typing')
 
     try:
-        prompt = urllib.parse.quote(user_text)
-        url = f"https://text.pollinations.ai/{prompt}"
+        # AIni doimo O'zbek tilida va ChatGPT modelida javob berishga majburlash:
+        url = "https://text.pollinations.ai/openai"
+        payload = {
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant. Always respond in Uzbek language accurately and clearly."},
+                {"role": "user", "content": user_text}
+            ],
+            "model": "openai"
+        }
         
-        response = requests.get(url, timeout=30)
+        response = requests.post(url, json=payload, timeout=30)
 
         if response.status_code == 200 and response.text.strip():
             bot.reply_to(message, response.text)
         else:
-            bot.reply_to(message, "😔 Kechirasiz, bu savolga javob topa olmadim.")
+            bot.reply_to(message, "😔 Kechirasiz, tarmoqda xatolik bo'ldi. Birozdan so'ng qayta urinib ko'ring.")
 
     except Exception:
         bot.reply_to(message, "⚠️ Server bilan bog'lanishda xatolik bo'ldi. Qaytadan urinib ko'ring.")
