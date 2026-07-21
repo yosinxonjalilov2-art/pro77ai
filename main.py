@@ -25,11 +25,10 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 BOT_TOKEN = "8989021358:AAF2uXLXO9F37hoNw6Eok4nH8jMj1vgPWjc"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Google Translate funksiyasi (bepul veb API orqali)
+# Google Translate funksiyasi
 def translate_to_english(text):
     if not text:
         return ""
-    # Agar matn faqat inglizcha harflardan iborat bo'lsa, tarjima shart emas
     if re.fullmatch(r'[a-zA-Z0-9\s\.,!?\'-]+', text):
         return text
     
@@ -39,27 +38,26 @@ def translate_to_english(text):
         
         if response.status_code == 200:
             result = response.json()
-            # Natijani ajratib olish (ko'p jumlali bo'lishi mumkin)
             translated_text = ""
             for item in result[0]:
                 if item[0]:
                     translated_text += item[0]
             return translated_text
-        return text # Xatolik bo'lsa, original matnni qaytarish
+        return text
     except Exception:
-        return text # Xatolik bo'lsa, original matnni qaytarish
+        return text
 
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     welcome_text = (
         "👋 **Pro 77 AI botiga xush kelibsiz!**\n\n"
         "🤖 **Matnli AI:** Menga istalgan savolingizni yozing, sun'iy intellekt javob beradi.\n\n"
-        "🎨 **Rasm chizish:** Rasm yasash uchun `/image` buyrug'idan foydalaning.\n"
-        "*(Masalan: `/image kosmosdagi uchayotgan mashina`)*"
+        "🎨 **Rasm chizish (FLUX Model):** Rasm yasash uchun `/image` buyrug'idan foydalaning.\n"
+        "*(Masalan: `/image qizil rangli super car, kechki shahar fonida, ultra-realistik`)*"
     )
     bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
-# 1. RASM CHIZISH BO'LIMI (/image buyrug'i)
+# 1. RASM CHIZISH BO'LIMI (FLUX MODELI ORQALI - ANIQ VA SIFATLI)
 @bot.message_handler(commands=['image'])
 def generate_image(message):
     original_prompt = message.text.replace('/image', '').strip()
@@ -68,15 +66,15 @@ def generate_image(message):
         bot.reply_to(message, "⚠️ Nima rasm chizishim kerakligini yozing!\n\n**Misol:** `/image suv ostidagi shahar`", parse_mode="Markdown")
         return
 
-    status_msg = bot.reply_to(message, "🎨 Tavsif tarjima qilinmoqda va rasm chizishga tayyorlanmoqda, bir oz kuting (10-15 soniya)...")
+    status_msg = bot.reply_to(message, "🎨 FLUX AI yordamida o'ta aniq rasm chizilmoqda, kuting (10-15 soniya)...")
 
-    # Matnni ingliz tiliga tarjima qilish (chizish sifatini yaxshilash uchun)
+    # Matnni tarjima qilish
     english_prompt = translate_to_english(original_prompt)
 
     try:
         encoded_prompt = urllib.parse.quote(english_prompt)
-        # Pollinations AI inglizcha prompt bilan yaxshiroq ishlaydi
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
+        # Modelni flux ga o'tkazdik (u so'rovlarni juda aniq va realistik chizadi)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&nologo=true"
 
         response = requests.get(image_url, timeout=60)
 
@@ -84,7 +82,7 @@ def generate_image(message):
             bot.send_photo(
                 message.chat.id, 
                 response.content, 
-                caption=f"🎨 **Siz so'ragan rasm:**\n_{original_prompt}_\n\n*(Inglizcha tavsif: {english_prompt})*", 
+                caption=f"🎨 **Siz so'ragan rasm (FLUX AI):**\n_{original_prompt}_\n\n*(Inglizcha tarjimasi: {english_prompt})*", 
                 parse_mode="Markdown",
                 reply_to_message_id=message.message_id
             )
@@ -95,8 +93,7 @@ def generate_image(message):
     except Exception:
         bot.edit_message_text("❌ Rasm yaratishda vaqt tugadi yoki xatolik bo'ldi. Qayta urinib ko'ring.", chat_id=message.chat.id, message_id=status_msg.message_id)
 
-# 2. AI CHAT BO'LIMI (GPT-4o orqali barqaror va o'zbekcha)
-# (Bu qism o'zgarmasdan qoladi, tepada to'g'rilangan versiya ishlatiladi)
+# 2. AI CHAT BO'LIMI
 @bot.message_handler(func=lambda message: True)
 def ai_chat(message):
     user_text = message.text.strip()
